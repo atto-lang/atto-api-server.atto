@@ -138,3 +138,23 @@ Zed cross-repository draft changes:
 - https://github.com/zed-pkg/zed-interfaces/pull/181
 - https://github.com/zed-pkg/zed-cli/pull/542
 - https://github.com/zed-pkg/zed-api-server.rs/pull/128
+
+
+## Executable PostgreSQL atomic-admission boundary (migration 003)
+
+`migrations/003_atomic_quarantine_admission.sql` now defines a real
+`admit_quarantined_build` PostgreSQL function. It uses an atomic conditional
+UPDATE + INSERT to quarantine; two independent database clients cannot both
+consume the same challenge. EXECUTE is revoked from PUBLIC and not granted to
+the API runtime until authenticated, signature-verified admission is wired.
+The function is SECURITY INVOKER and cannot approve a release.
+
+The separately executable `tests/postgres-admission.sh` applies migrations
+001-003 to disposable PostgreSQL, seeds active/revoked keys, asserts wrong
+tenant and upload-token rejection, NULL Zed package-audience rejection,
+two concurrent clients yield exactly one winner, and a fresh-connection
+replay fails. The `postgres-admission.yml` workflow exercises this on a
+Postgres 16 service. **Passing this database-only test does not prove**
+Oreslang HTTP, Ed25519, auth, object-store durability or independent
+compilation verification. These remain blocked; /ready and privileged routes
+must continue returning 503.
