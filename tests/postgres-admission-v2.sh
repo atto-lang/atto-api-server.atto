@@ -57,6 +57,36 @@ winners="$(grep -h -c '^11111111-1111-1111-1111-111111111111$' "$tmp/first" "$tm
 test "$winners" = 1 || { echo "SECURITY FAIL: $winners concurrent winners"; exit 1; }
 replay="$(psql -X -q -A -t -v ON_ERROR_STOP=1 "$DATABASE_URL" -c "$call")"
 test -z "$replay" || { echo "SECURITY FAIL: replay accepted"; exit 1; }
+# A collision during the quarantine INSERT must roll back challenge
+# consumption; never swallow it with ON CONFLICT DO NOTHING.
+psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" <<'SQL'
+INSERT INTO device_build_challenges
+ (challenge_id,tenant_id,device_key_id,nonce,upload_token_sha256,source_commit,
+  source_sha256,toolchain_sha256,target,expires_at,audience,zed_org,zed_package,zed_version)
+ VALUES ('33333333-3333-3333-3333-333333333333','tenant-a','device-a',
+  decode(repeat('b3',32),'hex'),decode(repeat('c3',32),'hex'),
+  repeat('a',40),repeat('b',64),repeat('c',64),'llvm',
+  clock_timestamp()+interval '3 minutes','zed-pkg/oreslang-build-api/v1','acme','widget','1.2.3');
+DO $
+BEGIN
+  BEGIN
+    PERFORM admit_quarantined_build(
+      '33333333-3333-3333-3333-333333333333','tenant-a','device-a',
+      'zed-pkg/oreslang-build-api/v1','acme','widget','1.2.3',
+      repeat('a',40),repeat('b',64),repeat('c',64),'llvm',
+      decode(repeat('b3',32),'hex'),decode(repeat('c3',32),'hex'),
+      repeat('d',64),'quarantine/11111111',repeat('e',64)
+    );
+    RAISE EXCEPTION 'SECURITY FAIL: duplicate immutable object key accepted';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+  IF EXISTS (
+    SELECT 1 FROM device_build_challenges
+    WHERE challenge_id='33333333-3333-3333-3333-333333333333'
+      AND consumed_at IS NOT NULL
+  ) THEN RAISE EXCEPTION 'SECURITY FAIL: partial challenge consumption after collision'; END IF;
+END $;
+SQL
 psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" <<'SQL'
 INSERT INTO enrolled_device_keys (tenant_id,device_key_id,ed25519_public_key,state,activated_at)
  VALUES ('tenant-a','device-b',decode(repeat('a2',32),'hex'),'active',clock_timestamp());
