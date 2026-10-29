@@ -1,0 +1,22 @@
+name: API structural policy checks (not live Oreslang execution)
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structural-non-promoting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Policy/source structure checks only
+        run: node --test tests/admission-structure.test.mjs
+      - name: Explicit evidence notice
+        run: |
+          echo "STRUCTURAL_ONLY: no Oreslang compiler execution, no Postgres test, no trusted device capability and no release certification"
