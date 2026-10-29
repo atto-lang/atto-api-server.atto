@@ -58,6 +58,9 @@ test('Zed audience cannot be silently substituted for generic Oreslang challenge
   const zed = fs.readFileSync(new URL('../migrations/002_zed_build_audience.sql', import.meta.url),'utf8');
   assert.match(zed,/zed-pkg\/oreslang-build-api\/v1/);
   assert.match(zed,/zed_org IS NULL AND zed_package IS NULL AND zed_version IS NULL/);
+  assert.match(zed,/zed_org IS NOT NULL/);
+  assert.match(zed,/zed_package IS NOT NULL/);
+  assert.match(zed,/zed_version IS NOT NULL/);
   assert.match(zed,/zed_org ~ /);
   assert.match(zed,/zed_package ~ /);
   assert.match(zed,/verification_level = 'untrusted-self-report'/);
