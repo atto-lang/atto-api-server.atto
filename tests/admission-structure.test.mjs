@@ -20,7 +20,8 @@ test('liveness is separated from blocked readiness',()=>{
 test('every sensitive endpoint fails closed until actual secure adapters',()=>{
   for(const route of [
     '/v1/device-keys','/v1/device-keys/confirm','/v1/device-keys/revoke',
-    '/v1/build-challenges','/v1/build-uploads'
+    '/v1/build-challenges','/v1/build-uploads',
+    '/v1/zed/build-challenges','/v1/zed/build-uploads'
   ]) {
     const start=server.indexOf('target == "'+route+'"');
     assert.ok(start>=0,'missing '+route);
@@ -51,4 +52,13 @@ test('never claim a signed device artifact is a trusted release',()=>{
   assert.doesNotMatch(sql,/CHECK \(state = 'release-approved'\)/);
   assert.match(sql,/CHECK \(state = 'quarantined'\)/);
   assert.match(server,/trusted_adapters_unavailable/);
+});
+
+test('Zed audience cannot be silently substituted for generic Oreslang challenge',()=>{
+  const zed = fs.readFileSync(new URL('../migrations/002_zed_build_audience.sql', import.meta.url),'utf8');
+  assert.match(zed,/zed-pkg\/oreslang-build-api\/v1/);
+  assert.match(zed,/zed_org IS NULL AND zed_package IS NULL AND zed_version IS NULL/);
+  assert.match(zed,/zed_org ~ /);
+  assert.match(zed,/zed_package ~ /);
+  assert.match(zed,/verification_level = 'untrusted-self-report'/);
 });
