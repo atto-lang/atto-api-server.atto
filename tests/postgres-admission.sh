@@ -19,6 +19,14 @@ INSERT INTO device_build_challenges
 VALUES
  ('11111111-1111-1111-1111-111111111111','tenant-a','device-a',decode(repeat('b1',32),'hex'),decode(repeat('c1',32),'hex'),repeat('a',40),repeat('b',64),repeat('c',64),'llvm',clock_timestamp()+interval '3 minutes','zed-pkg/oreslang-build-api/v1','acme','widget','1.2.3'),
  ('22222222-2222-2222-2222-222222222222','tenant-a','revoked',decode(repeat('b2',32),'hex'),decode(repeat('c2',32),'hex'),repeat('a',40),repeat('b',64),repeat('c',64),'llvm',clock_timestamp()+interval '3 minutes','oreslang-build-api/v1',NULL,NULL,NULL);
+-- Expiry must use database clock and reject even if the token is valid.
+INSERT INTO device_build_challenges
+ (challenge_id,tenant_id,device_key_id,nonce,upload_token_sha256,source_commit,
+  source_sha256,toolchain_sha256,target,created_at,expires_at)
+VALUES ('44444444-4444-4444-4444-444444444444','tenant-a','device-a',
+  decode(repeat('b4',32),'hex'),decode(repeat('c4',32),'hex'),
+  repeat('a',40),repeat('b',64),repeat('c',64),'llvm',
+  clock_timestamp()-interval '10 minutes',clock_timestamp()-interval '9 minutes');
 -- PostgreSQL CHECK accepts NULL expressions unless fields explicitly prohibit it.
 DO $$
 BEGIN
@@ -45,6 +53,10 @@ BEGIN
     '11111111-1111-1111-1111-111111111111','tenant-a','device-a',
     decode(repeat('11',32),'hex'),repeat('d',64),'quarantine/wrong-token',repeat('e',64)
   )) THEN RAISE EXCEPTION 'SECURITY FAIL: token substitution'; END IF;
+  IF EXISTS(SELECT * FROM admit_quarantined_build(
+    '44444444-4444-4444-4444-444444444444','tenant-a','device-a',
+    decode(repeat('c4',32),'hex'),repeat('d',64),'quarantine/expired',repeat('e',64)
+  )) THEN RAISE EXCEPTION 'SECURITY FAIL: expired token'; END IF;
   IF EXISTS(SELECT * FROM admit_quarantined_build(
     '22222222-2222-2222-2222-222222222222','tenant-a','revoked',
     decode(repeat('c2',32),'hex'),repeat('d',64),'quarantine/revoked',repeat('e',64)
