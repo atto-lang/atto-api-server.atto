@@ -1,0 +1,42 @@
+name: PostgreSQL one-use quarantine admission (DB only)
+on:
+  pull_request:
+    paths:
+      - 'migrations/**'
+      - 'tests/postgres-admission.sh'
+      - '.github/workflows/postgres-admission.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-atomic-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: builds
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d builds"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://test:local-test-only@127.0.0.1:5432/builds
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Execute real PostgreSQL two-session race and replay tests
+        run: bash tests/postgres-admission.sh
+      - name: Non-promoting evidence notice
+        run: echo "DB_ONLY_PASS: This tests PostgreSQL admission. Oreslang HTTP, authenticated device enrollment, Ed25519/DSSE and release verification are NOT executed."
