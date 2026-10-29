@@ -103,3 +103,7 @@ First deployment should bind 127.0.0.1:3000 behind a trusted TLS reverse
 proxy, with Deno-like scoped permissions/flags-2-env, bounded ingress,
 rate limits, tenant auth, audit logs without secrets, and readiness probes.
 The prototype must remain non-ready while trusted adapters are absent.
+
+Experimental local LLVM AOT build command implementation is drafted in:
+https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/2249
+This PR is not merged or verified against the actual LLVM compiler yet.
