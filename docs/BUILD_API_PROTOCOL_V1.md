@@ -107,3 +107,34 @@ The prototype must remain non-ready while trusted adapters are absent.
 Experimental local LLVM AOT build command implementation is drafted in:
 https://github.com/ores-truffle-oreslang/oreslang-source.java/pull/2249
 This PR is not merged or verified against the actual LLVM compiler yet.
+
+
+## Zed Package signed-build integration (schema + refusal only)
+
+Draft routes:
+- POST /v1/zed/build-challenges
+- POST /v1/zed/build-uploads
+
+Both currently return HTTP 503. Migration 002 adds immutable audience binding
+zed-pkg/oreslang-build-api/v1 plus required org/package/version fields to
+the original one-use challenge rows. PostgreSQL CHECK constraints must not
+allow NULL to bypass audience binding.
+
+The Zed signed-build v1 format is domain-separated Ed25519 over the Zed
+claims' canonical JSON bytes. It is NOT the DSSE/in-toto envelope used by the
+earlier Oreslang reference verifier. A production Oreslang adapter must
+explicitly verify whichever versioned signature scheme it accepts, using a
+trusted registered key and the original durable server challenge. Never
+silently reinterpret one format as another or accept a client-declared
+Zed publisher key as an Oreslang-enrolled device key.
+
+The Zed registry's verification endpoint checks active org publisher key
+signatures and **actual published artifact bytes**, but its response is only
+signed-self-report-not-compiled-proof. It never consumes this API's challenge.
+A separate trust decision must verify original challenge, one-time admission,
+and actual independently trustworthy compilation evidence before release.
+
+Zed cross-repository draft changes:
+- https://github.com/zed-pkg/zed-interfaces/pull/181
+- https://github.com/zed-pkg/zed-cli/pull/542
+- https://github.com/zed-pkg/zed-api-server.rs/pull/128
