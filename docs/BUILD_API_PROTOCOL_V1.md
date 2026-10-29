@@ -158,3 +158,28 @@ Postgres 16 service. **Passing this database-only test does not prove**
 Oreslang HTTP, Ed25519, auth, object-store durability or independent
 compilation verification. These remain blocked; /ready and privileged routes
 must continue returning 503.
+
+
+## Hardened database admission v2 (migration 004)
+
+Migration `004_harden_challenge_admission.sql` replaces the draft 003
+function with a SECURITY INVOKER operation. It must match the **original
+server-issued row** on tenant and enrolled device key; challenge audience;
+Zed org, package, and version (null-safe for non-Zed); source commit and
+source SHA-256; toolchain SHA-256; target; 32-byte nonce; and upload-token
+digest. Admission still requires unconsumed, unexpired state. A row lock
+(`FOR SHARE`) on the active device key serializes revocation and admission.
+
+The `postgres-admission.yml` workflow keeps the existing baseline
+migration-003 tests and runs `tests/postgres-admission-v2.sh` against a
+separate, newly created PostgreSQL 16 database. The v2 suite exercises
+cross-audience substitution, cross-package substitution, toolchain/nonce
+substitution, a two-client single-use race, persisted replay rejection,
+and a concurrent revocation that wins the key lock before admission.
+
+**No result is claimed without executed CI steps.** The migration has no
+GRANT to a runtime/API role. HTTP routes remain 503; database admission
+does not verify Ed25519 or DSSE, does not stage/rehash the actual artifact,
+and does not independently certify compilation. It returns quarantine
+identity only. Provision an authenticated Oreslang adapter and least-
+privilege SQL rights only after verifying the full chain.
