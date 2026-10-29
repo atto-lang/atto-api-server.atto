@@ -15,6 +15,9 @@ ALTER TABLE device_build_challenges
        AND zed_org IS NULL AND zed_package IS NULL AND zed_version IS NULL)
     OR
     (audience = 'zed-pkg/oreslang-build-api/v1'
+       AND zed_org IS NOT NULL
+       AND zed_package IS NOT NULL
+       AND zed_version IS NOT NULL
        AND zed_org ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'
        AND zed_package ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'
        AND length(zed_version) BETWEEN 1 AND 128
