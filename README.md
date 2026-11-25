@@ -37,3 +37,11 @@ This is a statement of intended scope, not a claim of completed implementation o
 AttoLang is the canonical project name; new source, examples and documentation use `.atto` and the `atto-lang` repository organization. This README defines scope, not feature readiness.
 
 **Acceptance:** name exact source SHA/tree, runtime/toolchain, positive and negative checks and execution receipt before claiming support. Host-only tests and empty CI steps do not prove guest execution.
+
+## Legacy migration provenance and gates
+
+The original `ores-truffle-oreslang/oreslang-api-server.ores` repository is archived; this repository imported its history rather than transferring the original numeric repository ID. Historical `.ores` examples and legacy package or CLI references are not evidence of current `.atto` compatibility. Verify any conversion against the normative specification and an executing compiler before claiming parity.
+
+[atto-lang](https://github.com/atto-lang) owns language and guest application examples; [atto-co](https://github.com/atto-co) owns production multi-tenant infrastructure, registry, deployment, identity and billing. Any future managed-product carve-out or original-ID transfer requires separate owner authorization. For an actual transfer, inventory history, exact tree, repository ID, protections, PRs, releases, packages, permissions, CI/runners, secrets, webhooks, integrations and dependencies; verify preservation and retest consumer references afterward. Never disclose or mirror private source without authorization.
+
+Security-critical capability issuance and one-use challenge consumption must fail closed until authenticated cryptographic and transactional-storage adapters pass integration tests. A client-signed upload is not proof of compilation. CI with no executed steps is not executed evidence.
