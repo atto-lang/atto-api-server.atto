@@ -1,0 +1,72 @@
+// Real Oreslang HTTP listener and actor-owned request dispatch.
+// SECURITY: this first integration refuses all privileged writes until the
+// transactional database and cryptographic adapters are wired and verified.
+// Do not replace refusal with in-memory state or filesystem check-then-write.
+define isoactor BuildApiHandler as
+  receive(ActorMail<String> mail): void {
+    val request = http.claim(mail.value);
+    try {
+      val String verb = request.method;
+      val String target = request.target;
+      if verb == "GET" && target == "/health"; then
+        await request.respond(200, "application/json", "{\"status\":\"alive\",\"service\":\"oreslang-build-api\"}");
+      elif verb == "GET" && target == "/ready"; then
+        // Liveness is NOT readiness. No authenticated durable store,
+        // key-enrollment verifier or independent attestation is online yet.
+        await request.respond(503, "application/json", "{\"ready\":false,\"reason\":\"trusted_adapters_unavailable\"}");
+      elif verb == "POST" && target == "/v1/device-keys"; then
+        await request.respond(503, "application/json", "{\"error\":\"device_enrollment_unavailable\"}");
+      elif verb == "POST" && target == "/v1/device-keys/confirm"; then
+        await request.respond(503, "application/json", "{\"error\":\"proof_of_possession_unavailable\"}");
+      elif verb == "POST" && target == "/v1/device-keys/revoke"; then
+        await request.respond(503, "application/json", "{\"error\":\"key_revocation_unavailable\"}");
+      elif verb == "POST" && target == "/v1/build-challenges"; then
+        await request.respond(503, "application/json", "{\"error\":\"durable_challenge_issuance_unavailable\"}");
+      elif verb == "POST" && target == "/v1/zed/build-challenges"; then
+        // Must be bound to the authenticated Zed org/package/version and the
+        // Oreslang server's durable challenge record, not request-supplied identity.
+        await request.respond(503, "application/json", "{\"error\":\"zed_signed_build_challenges_unavailable\"}");
+      elif verb == "POST" && target == "/v1/zed/build-uploads"; then
+        // Zed's domain-separated self-signature is NOT an independent
+        // compile proof. No artifact may enter a trusted release channel.
+        await request.respond(503, "application/json", "{\"error\":\"zed_signed_build_admission_unavailable\"}");
+      elif verb == "POST" && target == "/v1/build-uploads"; then
+        await request.respond(503, "application/json", "{\"error\":\"verified_quarantine_unavailable\"}");
+      elif verb == "GET" && target.starts_with("/v1/builds/"); then
+        await request.respond(503, "application/json", "{\"error\":\"verification_lookup_unavailable\"}");
+      else
+        await request.respond(404, "application/json", "{\"error\":\"not_found\"}");
+      fi
+      self.end();
+      return;
+    } catch (failure) {
+      // Never log Authorization headers, bearer capabilities, or request body.
+      if request.can_respond; then
+        await request.respond(500, "application/json", "{\"error\":\"internal_error\"}");
+      fi
+      self.end();
+      return;
+    }
+  }
+end
+
+define module api as
+  pub fnc handler(): HttpHandler {
+    return http.handler("BuildApiHandler");
+  }
+end
+
+// Loopback-only development binding. Production requires a trusted TLS
+// reverse proxy, tenant authentication and authoritatively validated identity.
+pub async routine main(): void {
+  val server = http.listen("127.0.0.1", 3000, 8, 65536, 10000);
+  val handler = api.handler();
+  stdio.println("Oreslang build API (fail-closed) listening on loopback");
+  loop {
+    val request = await server.accept();
+    val completion = request.completion;
+    handler.dispatch(request);
+    val int completed_status = await completion;
+  }
+  return;
+}

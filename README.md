@@ -45,3 +45,14 @@ The original `ores-truffle-oreslang/oreslang-api-server.ores` repository is arch
 [atto-lang](https://github.com/atto-lang) owns language and guest application examples; [atto-co](https://github.com/atto-co) owns production multi-tenant infrastructure, registry, deployment, identity and billing. Any future managed-product carve-out or original-ID transfer requires separate owner authorization. For an actual transfer, inventory history, exact tree, repository ID, protections, PRs, releases, packages, permissions, CI/runners, secrets, webhooks, integrations and dependencies; verify preservation and retest consumer references afterward. Never disclose or mirror private source without authorization.
 
 Security-critical capability issuance and one-use challenge consumption must fail closed until authenticated cryptographic and transactional-storage adapters pass integration tests. A client-signed upload is not proof of compilation. CI with no executed steps is not executed evidence.
+
+## Verified build API scaffold (legacy source, not runnable evidence)
+
+The imported `src/main.ores` is a historical actor HTTP scaffold, not a verified current AttoLang guest. Its intended behavior is loopback-only liveness at GET /health and HTTP 503 for GET /ready and all privileged operations. Authentication, device-key proof, secure randomness, the database adapter, DSSE verification and immutable object storage are not wired. A signed upload is an untrusted self-report, never release authority.
+
+- [Protocol and trust contract](docs/BUILD_API_PROTOCOL_V1.md)
+- [Initial PostgreSQL schema](migrations/001_device_build_admission.sql) and [hardened admission](migrations/004_harden_challenge_admission.sql)
+- [Legacy HTTP scaffold](src/main.ores)
+- [Structural tests](tests/admission-structure.test.mjs)
+
+Run `node --test tests/admission-structure.test.mjs` for source assertions only. Run `bash tests/postgres-admission.sh` and `bash tests/postgres-admission-v2.sh` with separate fresh disposable PostgreSQL databases via DATABASE_URL for database-only evidence. Neither suite executes the guest. A current compiler, live HTTP tests, authenticated tenant/device verification, durable replay/race and crash recovery, verified quarantine and independent release attestation remain merge gates for the security feature. Historical `oreslang build` is a proposed artifact-emitting command, not evidence that checked-source bundles or build analysis emit executable artifacts.
