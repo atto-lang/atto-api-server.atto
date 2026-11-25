@@ -25,9 +25,14 @@ test('every sensitive endpoint fails closed until actual secure adapters',()=>{
   ]) {
     const start=server.indexOf('target == "'+route+'"');
     assert.ok(start>=0,'missing '+route);
-    const next=server.indexOf('request.respond(',start);
-    assert.ok(next>=0 && next-start<80,'missing response '+route);
-    assert.match(server.slice(next,next+50),/^request\.respond\(503,/,'unsafe active '+route);
+    // Bound the search to this route's branch, ignoring comment length.
+    const tail=server.slice(start);
+    const boundary=tail.search(/^\s*(?:elif\b|else\b|fi\b)/m);
+    assert.ok(boundary>0,'missing branch boundary '+route);
+    const branch=tail.slice(0,boundary).replace(/^\s*\/\/.*$/gm,'');
+    const responses=[...branch.matchAll(/request\.respond\(\s*(\d+)\s*,/g)];
+    assert.equal(responses.length,1,'expected exactly one response '+route);
+    assert.equal(responses[0][1],'503','unsafe active '+route);
   }
   assert.doesNotMatch(server,/request\.respond\(20[01],[^\n]*device_enrollment/);
 });
