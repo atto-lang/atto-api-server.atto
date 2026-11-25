@@ -67,7 +67,7 @@ INSERT INTO device_build_challenges
   decode(repeat('b3',32),'hex'),decode(repeat('c3',32),'hex'),
   repeat('a',40),repeat('b',64),repeat('c',64),'llvm',
   clock_timestamp()+interval '3 minutes','zed-pkg/oreslang-build-api/v1','acme','widget','1.2.3');
-DO $
+DO $collision$
 BEGIN
   BEGIN
     PERFORM admit_quarantined_build(
@@ -85,7 +85,18 @@ BEGIN
     WHERE challenge_id='33333333-3333-3333-3333-333333333333'
       AND consumed_at IS NOT NULL
   ) THEN RAISE EXCEPTION 'SECURITY FAIL: partial challenge consumption after collision'; END IF;
-END $;
+  IF EXISTS (
+    SELECT 1 FROM quarantined_device_builds
+    WHERE challenge_id='33333333-3333-3333-3333-333333333333'
+  ) THEN RAISE EXCEPTION 'SECURITY FAIL: receipt persisted after collision'; END IF;
+  IF NOT EXISTS (SELECT * FROM admit_quarantined_build(
+      '33333333-3333-3333-3333-333333333333','tenant-a','device-a',
+      'zed-pkg/oreslang-build-api/v1','acme','widget','1.2.3',
+      repeat('a',40),repeat('b',64),repeat('c',64),'llvm',
+      decode(repeat('b3',32),'hex'),decode(repeat('c3',32),'hex'),
+      repeat('d',64),'quarantine/33333333',repeat('e',64)
+  )) THEN RAISE EXCEPTION 'SECURITY FAIL: retry after rolled-back collision rejected'; END IF;
+END $collision$;
 SQL
 psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" <<'SQL'
 INSERT INTO enrolled_device_keys (tenant_id,device_key_id,ed25519_public_key,state,activated_at)
