@@ -43,4 +43,5 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 "$DATABASE_URL" -c 'CREATE DATABASE builds_hardened'
           DATABASE_URL=postgresql://test:local-test-only@127.0.0.1:5432/builds_hardened bash tests/postgres-admission-v2.sh
       - name: Non-promoting evidence notice
-        run: echo "DB_ONLY_PASS: This tests PostgreSQL admission. Oreslang HTTP, authenticated device enrollment, Ed25519/DSSE and release verification are NOT executed."
+        run: |
+          echo "DB_ONLY_PASS: This tests PostgreSQL admission. Oreslang HTTP, authenticated device enrollment, Ed25519/DSSE and release verification are NOT executed."
